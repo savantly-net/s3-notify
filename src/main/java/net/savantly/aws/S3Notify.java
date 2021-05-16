@@ -40,7 +40,8 @@ public class S3Notify implements Runnable {
     @CommandLine.Option(names = {"-r", "--region"}, description = "The origin region of the event that should be simulated", required = false, defaultValue = "us-east-2")
     String region;
 
-    @CommandLine.Option(names = {"-s", "--service"}, description = "The services that should be sent a notification", required = false, defaultValue = "SNS", type = DestinationType.class)
+    @CommandLine.Option(names = {"-s", "--service"}, description = "The services that should be sent a notification [SNS,SQS,LAMBDA]", required = false, defaultValue = "SNS", 
+    		type = DestinationType.class)
     List<DestinationType> destinations;
 
     @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose logging")
@@ -83,28 +84,28 @@ public class S3Notify implements Runnable {
     		log.warn("SQS not supported yet");
     	}
     	
-        log.info("Sending notifications to: {0}, for files in bucket: {1} matching prefix: {2}", destinations, bucket, prefix);
-        log.info("debug: {0}, verbose: {1}, event: {2}, match: {3}", debug, verbose, event, match);
+        log.info("Sending notifications to: {}, for files in bucket: {} matching prefix: {}", destinations, bucket, prefix);
+        log.info("debug: {}, verbose: {}, event: {}, match: {}", debug, verbose, event, match);
         AtomicLong touchCount = new AtomicLong();
         AtomicLong skipCount = new AtomicLong();
         
-        s3.listObjectsV2(listObjectsRequestBuilder -> {
+        s3.listObjectsV2Paginator(listObjectsRequestBuilder -> {
         	listObjectsRequestBuilder.bucket(bucket).prefix(prefix);
-        }).contents().forEach(f -> {
-        	
-        	if (Objects.nonNull(match) && !f.key().matches(match)) {
-        		if (verbose) log.debug("{0} not matched");
-        		skipCount.getAndIncrement();
-        	} else {
-        		if (optTopicArn.isPresent()) {
-        			if (verbose) {
-                		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
-                	}
-            		sendNotificationToSns(f, optTopicArn.get());
-            		touchCount.getAndIncrement();
-        		}
-        	}
-        	
+        }).stream().forEach(page -> {
+        	page.contents().forEach(f -> {
+            	if (Objects.nonNull(match) && !f.key().matches(match)) {
+            		if (verbose) log.debug("{} not matched");
+            		skipCount.getAndIncrement();
+            	} else {
+            		if (optTopicArn.isPresent()) {
+            			if (verbose) {
+                    		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
+                    	}
+                		sendNotificationToSns(f, optTopicArn.get());
+                		touchCount.getAndIncrement();
+            		}
+            	}
+            });
         });
         log.info("notifications: {}, skipped: {}", touchCount.get(), skipCount.get());
     }

@@ -9,40 +9,10 @@ Execute from the command line to trigger S3 notifications for a specific bucket/
 
 Example -  
 
-```
-$ java -jar target/s3-notify-1.0.0-SNAPSHOT-runner.jar                                                                                                                                                      
+`$ java -jar target/s3-notify-1.0.0-SNAPSHOT-runner.jar   `
 
- __ _____       __      _   _  __
-/ _\___ /    /\ \ \___ | |_(_)/ _|_   _
-\ \  |_ \   /  \/ / _ \| __| | |_| | | |
-_\ \___) | / /\  / (_) | |_| |  _| |_| |
-\__/____/  \_\ \/ \___/ \__|_|_|  \__, |
-                                  |___/
+![running it](./docs/example.png)                                                                                                                                                    
 
-https://www.linkedin.com/in/jeremybranham/
-Savantly.net
-
-           Powered by Quarkus 1.13.4.Final
-2021-06-03 08:17:39,267 INFO  [io.quarkus] (main) s3-notify 1.0.0-SNAPSHOT on JVM (powered by Quarkus 1.13.4.Final) started in 1.251s.
-2021-06-03 08:17:39,304 INFO  [io.quarkus] (main) Profile prod activated.
-2021-06-03 08:17:39,305 INFO  [io.quarkus] (main) Installed features: [amazon-s3, amazon-sns, cdi, picocli]
-Missing required option: '--bucket=<bucket>'
-Usage: <main class> [-dv] -b=<bucket> [-e=<event>] [-m=<match>] [-p=<prefix>]
-                    [-r=<region>] [-s=<destinations>]...
-Simulates S3 event notifications
-  -b, --bucket=<bucket>   The bucket name containing the S3 objects
-  -d, --debug             Debug logging
-  -e, --event=<event>     The event that should be simulated
-  -m, --match=<match>     Only process objects with keys matching this regex
-  -p, --prefix=<prefix>   Only process objects with this key prefix
-  -r, --region=<region>   The origin region of the event that should be
-                            simulated
-  -s, --service=<destinations>
-                          The services that should be sent a notification [SNS,
-                            SQS,LAMBDA]
-  -v, --verbose           Verbose logging
-2021-06-03 08:17:39,511 INFO  [io.quarkus] (main) s3-notify stopped in 0.032s
-```
 
 Example processing a bucket using a prefix and regex matcher -  
 

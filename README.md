@@ -10,7 +10,7 @@ Execute from the command line to trigger S3 notifications for a specific bucket/
 Example -  
 
 ```
-java -jar s3-notify.jar                                                     ─╯
+$ java -jar target/s3-notify-1.0.0-SNAPSHOT-runner.jar                                                                                                                                                      
 
  __ _____       __      _   _  __
 / _\___ /    /\ \ \___ | |_(_)/ _|_   _
@@ -23,11 +23,10 @@ https://www.linkedin.com/in/jeremybranham/
 Savantly.net
 
            Powered by Quarkus 1.13.4.Final
-2021-05-15 14:40:40,896 WARN  [io.qua.config] (main) Unrecognized configuration key "quarkus.package.uber-jar" was provided; it will be ignored; verify that the dependency extension for this configuration is set or that you did not make a typo
-2021-05-15 14:40:42,868 INFO  [io.quarkus] (main) s3-notify 1.0.0-SNAPSHOT on JVM (powered by Quarkus 1.13.4.Final) started in 2.886s.
-2021-05-15 14:40:42,870 INFO  [io.quarkus] (main) Profile prod activated.
-2021-05-15 14:40:42,870 INFO  [io.quarkus] (main) Installed features: [amazon-s3, amazon-sns, cdi, picocli]
-
+2021-06-03 08:17:39,267 INFO  [io.quarkus] (main) s3-notify 1.0.0-SNAPSHOT on JVM (powered by Quarkus 1.13.4.Final) started in 1.251s.
+2021-06-03 08:17:39,304 INFO  [io.quarkus] (main) Profile prod activated.
+2021-06-03 08:17:39,305 INFO  [io.quarkus] (main) Installed features: [amazon-s3, amazon-sns, cdi, picocli]
+Missing required option: '--bucket=<bucket>'
 Usage: <main class> [-dv] -b=<bucket> [-e=<event>] [-m=<match>] [-p=<prefix>]
                     [-r=<region>] [-s=<destinations>]...
 Simulates S3 event notifications
@@ -39,10 +38,38 @@ Simulates S3 event notifications
   -r, --region=<region>   The origin region of the event that should be
                             simulated
   -s, --service=<destinations>
-                          The services that should be sent a notification
+                          The services that should be sent a notification [SNS,
+                            SQS,LAMBDA]
   -v, --verbose           Verbose logging
-2021-05-15 14:40:43,323 INFO  [io.quarkus] (main) s3-notify stopped in 0.095s
+2021-06-03 08:17:39,511 INFO  [io.quarkus] (main) s3-notify stopped in 0.032s
 ```
+
+Example processing a bucket using a prefix and regex matcher -  
+
+```
+$ java -jar target/quarkus-app/quarkus-run.jar  --bucket=my-bucket-xxxx --prefix=gndxfer/10 -m ".*/202105\d{2}/(GNDITEM|GNDSALE).dbf"                                         
+
+ __ _____       __      _   _  __
+/ _\___ /    /\ \ \___ | |_(_)/ _|_   _
+\ \  |_ \   /  \/ / _ \| __| | |_| | | |
+_\ \___) | / /\  / (_) | |_| |  _| |_| |
+\__/____/  \_\ \/ \___/ \__|_|_|  \__, |
+                                  |___/
+
+https://www.linkedin.com/in/jeremybranham/
+Savantly.net
+
+           Powered by Quarkus 1.13.4.Final
+2021-05-27 22:18:09,012 INFO  [io.quarkus] (main) s3-notify 1.0.0-SNAPSHOT on JVM (powered by Quarkus 1.13.4.Final) started in 1.424s.
+2021-05-27 22:18:09,012 INFO  [io.quarkus] (main) Profile prod activated.
+2021-05-27 22:18:09,013 INFO  [io.quarkus] (main) Installed features: [amazon-s3, amazon-sns, cdi, picocli]
+2021-05-27 22:18:09,854 INFO  [net.sav.aws.S3Notify] (main) matched topic: s3:ObjectCreated:*
+2021-05-27 22:18:09,855 INFO  [net.sav.aws.S3Notify] (main) Sending notifications to: [SNS], for files in bucket: my-bucket-xxxx matching prefix: gndxfer/10
+2021-05-27 22:18:09,855 INFO  [net.sav.aws.S3Notify] (main) debug: false, verbose: false, event: ObjectCreated:Put, match: .*/202105\d{2}/(GNDITEM|GNDSALE).dbf
+2021-05-27 22:22:08,959 INFO  [net.sav.aws.S3Notify] (main) notifications: 392, skipped: 372260
+2021-05-27 22:22:08,968 INFO  [io.quarkus] (main) s3-notify stopped in 0.007s
+```
+
 
 A native executable can be built, but I'm new to quarkus and haven't done this yet.  
 
@@ -56,14 +83,6 @@ This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
 
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live coding using:
-```shell script
-./mvnw compile quarkus:dev
-```
-
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:8080/q/dev/.
 
 ## Packaging and running the application
 

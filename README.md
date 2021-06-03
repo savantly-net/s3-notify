@@ -3,7 +3,7 @@
 
 ## Quick start
 
-Download the [latest release]()  
+Download the [latest release](https://github.com/savantly-net/s3-notify/releases)  
 
 Execute from the command line to trigger S3 notifications for a specific bucket/objects.  
 

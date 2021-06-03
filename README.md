@@ -17,7 +17,7 @@ Example -
 Example processing a bucket using a prefix and regex matcher -  
 
 ```
-$ java -jar target/quarkus-app/quarkus-run.jar  --bucket=my-bucket-xxxx --prefix=gndxfer/10 -m ".*/202105\d{2}/(GNDITEM|GNDSALE).dbf"                                         
+$ java -jar target/s3-notify-1.0.0-SNAPSHOT-runner.jar  --bucket=my-bucket-xxxx --prefix=gndxfer/10 -m ".*/202105\d{2}/(GNDITEM|GNDSALE).dbf"                                         
 
  __ _____       __      _   _  __
 / _\___ /    /\ \ \___ | |_(_)/ _|_   _

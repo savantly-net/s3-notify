@@ -3,6 +3,7 @@
 
 ## Quick start
 
+### Jar File
 Download the [latest release](https://github.com/savantly-net/s3-notify/releases)  
 
 Execute from the command line to trigger S3 notifications for a specific bucket/objects.  
@@ -13,7 +14,11 @@ Example -
 
 ![running it](./docs/example.png)                                                                                                                                                    
 
+### Docker
+You can also run the command using Docker -  
+`docker run -v ~/.aws:/root/.aws savantly/s3notify:latest --bucket=my-bucket --prefix=qwerty123`  
 
+## Example
 Example processing a bucket using a prefix and regex matcher -  
 
 ```

@@ -1,5 +1,9 @@
 package net.savantly.aws;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +35,9 @@ public class S3Notify implements Runnable {
     @CommandLine.Option(names = {"-p", "--prefix"}, description = "Only process objects with this key prefix", required = false, defaultValue = "")
     String prefix;
 
+    @CommandLine.Option(names = {"-f", "--file"}, description = "A file containing a key prefix on each line to process", required = false)
+    String prefixFile;
+
     @CommandLine.Option(names = {"-m", "--match"}, description = "Only process objects with keys matching this regex", required = false)
     String match;
 
@@ -60,6 +67,7 @@ public class S3Notify implements Runnable {
 
     @Override
     public void run() {
+    	Instant start = Instant.now();
     	if (debug) {
     		verbose = true;
     	}
@@ -84,33 +92,61 @@ public class S3Notify implements Runnable {
     		log.warn("SQS not supported yet");
     	}
     	
-        log.info("Sending notifications to: {}, for files in bucket: {} matching prefix: {}", destinations, bucket, prefix);
-        log.info("debug: {}, verbose: {}, event: {}, match: {}", debug, verbose, event, match);
-        AtomicLong touchCount = new AtomicLong();
-        AtomicLong skipCount = new AtomicLong();
-        
-        s3.listObjectsV2Paginator(listObjectsRequestBuilder -> {
-        	listObjectsRequestBuilder.bucket(bucket).prefix(prefix);
-        }).stream().forEach(page -> {
-        	page.contents().forEach(f -> {
-            	if (Objects.nonNull(match) && !f.key().matches(match)) {
-            		if (verbose) log.debug("{} not matched");
-            		skipCount.getAndIncrement();
-            	} else {
-            		if (optTopicArn.isPresent()) {
-            			if (verbose) {
-                    		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
-                    	}
-                		sendNotificationToSns(f, optTopicArn.get());
-                		touchCount.getAndIncrement();
-            		}
-            	}
+    	List<String> prefixList = getPrefixes();
+    	for (String _prefix : prefixList) {
+    		log.info("Sending notifications to: {}, for files in bucket: {} matching prefix: {}", destinations, bucket, _prefix);
+            log.info("debug: {}, verbose: {}, event: {}, match: {}", debug, verbose, event, match);
+            AtomicLong touchCount = new AtomicLong();
+            AtomicLong skipCount = new AtomicLong();
+            
+            s3.listObjectsV2Paginator(listObjectsRequestBuilder -> {
+            	listObjectsRequestBuilder.bucket(bucket).prefix(_prefix);
+            }).stream().forEach(page -> {
+            	page.contents().forEach(f -> {
+                	if (Objects.nonNull(match) && !f.key().matches(match)) {
+                		if (verbose) log.debug("{} not matched");
+                		skipCount.getAndIncrement();
+                	} else {
+                		if (optTopicArn.isPresent()) {
+                			if (verbose) {
+                        		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
+                        	}
+                    		sendNotificationToSns(f, optTopicArn.get());
+                    		touchCount.getAndIncrement();
+                		}
+                	}
+                });
             });
-        });
-        log.info("notifications: {}, skipped: {}", touchCount.get(), skipCount.get());
+            log.info("notifications: {}, skipped: {}", touchCount.get(), skipCount.get());
+		}
+    	Instant finish = Instant.now();
+    	Duration timeElapsed = Duration.between(start, finish);
+    	log.info("total time: " + humanReadableFormat(timeElapsed));
     }
     
-    protected Optional<String> getTopicArn(GetBucketNotificationConfigurationResponse notificationConfig) {
+    public static String humanReadableFormat(Duration duration) {
+        return duration.toString()
+                .substring(2)
+                .replaceAll("(\\d[HMS])(?!$)", "$1 ")
+                .toLowerCase();
+    }
+    
+    private List<String> getPrefixes() {
+		if (Objects.nonNull(prefixFile)) {
+			try {
+				var path = Paths.get(prefixFile);
+			    return Files.readAllLines(path);
+			} catch (Exception e) {
+				log.error("could not read prefix file: {}", e);
+				System.exit(1);
+				return null;
+			}
+		} else {
+			return List.of(prefix);
+		}
+	}
+
+	protected Optional<String> getTopicArn(GetBucketNotificationConfigurationResponse notificationConfig) {
     	if (destinations.contains(DestinationType.SNS) && notificationConfig.hasTopicConfigurations()) {
 
        	 	final List<TopicConfiguration> availableTopics = notificationConfig.topicConfigurations();

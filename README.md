@@ -1,5 +1,9 @@
 # s3-notify
 
+Iterates objects in an S3 bucket and simulates an S3 event by sending a message to SNS.  
+
+SQS/Lambda are not supported yet as destinations, but PRs welcome.  
+
 
 ## Quick start
 
@@ -17,6 +21,12 @@ Example -
 ### Docker
 You can also run the command using Docker -  
 `docker run -v ~/.aws:/root/.aws savantly/s3notify:latest --bucket=my-bucket --prefix=qwerty123`  
+
+## Features
+
+- Prefix matching by command line option, or provide a list of prefixes in an external file
+- Regex pattern matching on the key
+
 
 ## Example
 Example processing a bucket using a prefix and regex matcher -  

@@ -22,6 +22,21 @@ Example -
 You can also run the command using Docker -  
 `docker run -v ~/.aws:/root/.aws savantly/s3notify:latest --bucket=my-bucket --prefix=qwerty123`  
 
+### Build it
+
+Check out the source code  
+
+```
+git clone git@github.com:savantly-net/s3-notify.git
+./mvnw package
+# optionally build the docker image
+docker build -t savantly/s3notify:latest .
+```
+
+Run it  
+`$ java -jar target/s3-notify-1.0.0-SNAPSHOT-runner.jar   `
+
+
 ## Features
 
 - Prefix matching by command line option, or provide a list of prefixes in an external file

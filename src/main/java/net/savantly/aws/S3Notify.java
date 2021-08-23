@@ -19,7 +19,6 @@ import io.quarkus.picocli.runtime.annotations.TopCommand;
 import picocli.CommandLine;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketNotificationConfigurationResponse;
-import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.TopicConfiguration;
 import software.amazon.awssdk.services.sns.SnsClient;
 
@@ -50,6 +49,12 @@ public class S3Notify implements Runnable {
     @CommandLine.Option(names = {"-s", "--service"}, description = "The services that should be sent a notification [SNS,SQS,LAMBDA]", required = false, defaultValue = "SNS", 
     		type = DestinationType.class)
     List<DestinationType> destinations;
+
+    @CommandLine.Option(names = {"--skip-s3-validation"}, description = "Skip validating the object key(s) exists before sending the notification. \n"
+    		+ "The prefix or prefix-file should contain the full object key(s). \n"
+    		+ "This is much faster, but consideration should be given to the SNS subscriber(s).\n"
+    		+ "Note - the S3 object size/etag will contain mock values in the S3 notifications.")
+    boolean skipS3Validation;
 
     @CommandLine.Option(names = {"-v", "--verbose"}, description = "Verbose logging")
     boolean verbose;
@@ -91,33 +96,47 @@ public class S3Notify implements Runnable {
     	if(destinations.contains(DestinationType.SQS)) {
     		log.warn("SQS not supported yet");
     	}
-    	
+
+        log.info("debug: {}, verbose: {}, event: {}, match: {}", debug, verbose, event, match);
+        if (skipS3Validation) {
+        	log.warn("Skipping S3 Validation!");
+        }
+        
     	List<String> prefixList = getPrefixes();
     	for (String _prefix : prefixList) {
-    		log.info("Sending notifications to: {}, for files in bucket: {} matching prefix: {}", destinations, bucket, _prefix);
-            log.info("debug: {}, verbose: {}, event: {}, match: {}", debug, verbose, event, match);
+    		if(verbose) {
+        		log.info("Sending notifications to: {}, for files in bucket: {} matching prefix: {}", destinations, bucket, _prefix);
+    		}
             AtomicLong touchCount = new AtomicLong();
             AtomicLong skipCount = new AtomicLong();
             
-            s3.listObjectsV2Paginator(listObjectsRequestBuilder -> {
-            	listObjectsRequestBuilder.bucket(bucket).prefix(_prefix);
-            }).stream().forEach(page -> {
-            	page.contents().forEach(f -> {
-                	if (Objects.nonNull(match) && !f.key().matches(match)) {
-                		if (verbose) log.debug("{} not matched");
-                		skipCount.getAndIncrement();
-                	} else {
-                		if (optTopicArn.isPresent()) {
-                			if (verbose) {
-                        		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
-                        	}
-                    		sendNotificationToSns(f, optTopicArn.get());
-                    		touchCount.getAndIncrement();
-                		}
-                	}
+            if (skipS3Validation) {
+            	// skipping validation, so use mock values for size/etag
+            	sendNotificationToSns(_prefix, 100L, "123", optTopicArn.get());
+        		touchCount.getAndIncrement();
+            } else {
+            	s3.listObjectsV2Paginator(listObjectsRequestBuilder -> {
+                	listObjectsRequestBuilder.bucket(bucket).prefix(_prefix);
+                }).stream().forEach(page -> {
+                	page.contents().forEach(f -> {
+                    	if (Objects.nonNull(match) && !f.key().matches(match)) {
+                    		if (verbose) log.debug("{} not matched");
+                    		skipCount.getAndIncrement();
+                    	} else {
+                    		if (optTopicArn.isPresent()) {
+                    			if (verbose) {
+                            		log.info("sending notification: {} to {}", f.key(), optTopicArn.get());
+                            	}
+                        		sendNotificationToSns(f.key(), f.size(), f.eTag(), optTopicArn.get());
+                        		touchCount.getAndIncrement();
+                    		}
+                    	}
+                    });
                 });
-            });
-            log.info("notifications: {}, skipped: {}", touchCount.get(), skipCount.get());
+            }
+            if (verbose) {
+                log.info("notifications: {}, skipped: {}", touchCount.get(), skipCount.get());
+            }
 		}
     	Instant finish = Instant.now();
     	Duration timeElapsed = Duration.between(start, finish);
@@ -182,12 +201,12 @@ public class S3Notify implements Runnable {
 		}
 	}
 
-	protected void sendNotificationToSns(S3Object f, String topicArn) {
-		sns.publish(publishRequest -> publishRequest.message(createMessageFromTemplate(f)).topicArn(topicArn ));
+	protected void sendNotificationToSns(String key, Long size, String etag, String topicArn) {
+		sns.publish(publishRequest -> publishRequest.message(createMessageFromTemplate(key, size, etag)).topicArn(topicArn));
         
 	}
 
-	protected String createMessageFromTemplate(S3Object f) {
+	protected String createMessageFromTemplate(String key, Long size, String etag) {
 		LocalDateTime now = LocalDateTime.now();
 		String template = String.format("{\n" + 
 				"	\"Records\": [\n" + 
@@ -211,7 +230,7 @@ public class S3Notify implements Runnable {
 				"			}\n" + 
 				"		}\n" + 
 				"	]\n" + 
-				"}", region, now, event, bucket, bucket, f.key(), f.size(), f.eTag());
+				"}", region, now, event, bucket, bucket, key, size, etag);
 		if (debug) {
 			log.debug(template);
 		}

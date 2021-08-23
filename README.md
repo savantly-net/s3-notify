@@ -28,7 +28,7 @@ Check out the source code
 
 ```
 git clone git@github.com:savantly-net/s3-notify.git
-./mvnw package
+./mvnw package -Dquarkus.package.type=uber-jar
 # optionally build the docker image
 docker build -t savantly/s3notify:latest .
 ```
@@ -41,6 +41,7 @@ Run it
 
 - Prefix matching by command line option, or provide a list of prefixes in an external file
 - Regex pattern matching on the key
+- Option to skip S3 validation [sends a notification without validation the object/key exists in S3 first] 
 
 
 ## Example
